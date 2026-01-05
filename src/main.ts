@@ -126,7 +126,7 @@ function initAudio() {
     });
     bgm.addEventListener('error', (e) => {
       console.error('[BGM] Error loading BGM:', e);
-      console.error('[BGM] Error details:', bgm.error);
+      if (bgm) console.error('[BGM] Error details:', bgm.error);
     });
     bgm.addEventListener('play', () => {
       console.log('[BGM] Started playing');
