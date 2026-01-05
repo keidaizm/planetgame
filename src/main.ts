@@ -110,8 +110,15 @@ const planetBag = new PlanetBag();
 // --- Audio ---
 let audioCtx: AudioContext | null = null;
 function initAudio() {
-  if (audioCtx) return;
+  if (audioCtx) {
+    // Resume AudioContext if suspended (important for mobile/tablet)
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().then(() => console.log('[Audio] AudioContext resumed'));
+    }
+    return;
+  }
   audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  console.log('[Audio] AudioContext created, state:', audioCtx.state);
 
   // Initialize and play BGM
   if (!bgm) {
@@ -135,13 +142,28 @@ function initAudio() {
       console.log('[BGM] Paused');
     });
 
-    bgm.play()
-      .then(() => console.log('[BGM] Play promise resolved successfully'))
-      .catch(err => {
-        console.error('[BGM] Play failed:', err);
-        console.error('[BGM] Error name:', err.name);
-        console.error('[BGM] Error message:', err.message);
-      });
+    bgm.addEventListener('ended', () => {
+      console.log('[BGM] Ended (should loop)');
+    });
+
+    // Try to play immediately
+    const playPromise = bgm.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => console.log('[BGM] Play promise resolved successfully'))
+        .catch(err => {
+          console.error('[BGM] Play failed:', err);
+          console.error('[BGM] Error name:', err.name);
+          console.error('[BGM] Error message:', err.message);
+          // Retry on next user interaction
+          document.addEventListener('click', () => {
+            if (bgm && bgm.paused) {
+              console.log('[BGM] Retrying play on user click...');
+              bgm.play().catch(e => console.error('[BGM] Retry failed:', e));
+            }
+          }, { once: true });
+        });
+    }
   }
 }
 function playSe(freq: number, type: OscillatorType, volume: number) {
