@@ -1,0 +1,186 @@
+:root {
+  --bg-color: #1a1a2e;
+  --panel-bg: rgba(255, 255, 255, 0.1);
+  --accent-color: #e94560;
+  --text-color: #ffffff;
+  --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-main);
+  background: var(--bg-color);
+  color: var(--text-color);
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  touch-action: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#app {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  height: 100%;
+  max-height: 900px;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #16213e 0%, #0f3460 100%);
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+}
+
+#hud {
+  height: 120px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 10px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(10px);
+  z-index: 10;
+}
+
+.hud-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hud-item.ring {
+  width: 100px;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: bold;
+  opacity: 0.8;
+  margin-bottom: 4px;
+}
+
+#next-canvas {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+#next-name {
+  font-size: 14px;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.score-box {
+  flex: 1;
+  text-align: right;
+  padding-right: 20px;
+}
+
+.score-line {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 2px 0;
+  letter-spacing: 1px;
+}
+
+#score {
+  color: #f9d423;
+}
+
+#hi-score {
+  color: #5bc0de;
+}
+
+#game-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+#game-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#evolution-ui {
+  height: 90px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  padding: 5px;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+.evo-item {
+  width: 42px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.evo-item canvas {
+  width: 30px;
+  height: 30px;
+}
+
+.evo-name {
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.evo-item.locked {
+  filter: grayscale(100%) brightness(0.5);
+}
+
+.evo-item.locked .evo-name {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+
+/* Retry Overlay */
+#retry-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  pointer-events: none;
+  /* Let clicks pass to container if we handle it there */
+}
+
+.retry-text {
+  font-size: 32px;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 20px;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 1);
+}
+
+.retry-sub {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.8);
+}
