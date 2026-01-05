@@ -115,7 +115,7 @@ function initAudio() {
 
   // Initialize and play BGM
   if (!bgm) {
-    bgm = new Audio('./bgm/puzzle-game.mp3');
+    bgm = new Audio('/bgm/puzzle-game.mp3');
     bgm.loop = true;
     bgm.volume = 0.3;
     bgm.play().catch(err => console.error("BGM play failed", err));
