@@ -29,9 +29,10 @@ body {
 #app {
   position: relative;
   width: 100%;
-  max-width: min(100vw, calc(100vh * 5 / 9));
-  /* Maintain 5:9 aspect ratio based on height */
-  height: 100vh;
+  max-width: 500px;
+  height: 100%;
+  max-height: min(900px, 95vh);
+  /* Ensure UI fits on screen */
   margin: 0 auto;
   /* Center horizontally */
   display: flex;
