@@ -62,7 +62,8 @@ let runner: Runner;
 
 let score = 0;
 let hiScore = parseInt(localStorage.getItem('hiScore') || '0');
-let discoveredLevels = new Set(JSON.parse(localStorage.getItem('discoveredLevels') || '[1]'));
+// Always start with only Pluto discovered for fresh experience
+let discoveredLevels = new Set([1]);
 
 let currentLevel = 1;
 let nextLevel = 1;
