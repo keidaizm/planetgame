@@ -115,10 +115,33 @@ function initAudio() {
 
   // Initialize and play BGM
   if (!bgm) {
+    console.log('[BGM] Initializing BGM...');
     bgm = new Audio('/bgm/puzzle-game.mp3');
     bgm.loop = true;
     bgm.volume = 0.3;
-    bgm.play().catch(err => console.error("BGM play failed", err));
+
+    // Add event listeners for debugging
+    bgm.addEventListener('canplaythrough', () => {
+      console.log('[BGM] Can play through - ready to play');
+    });
+    bgm.addEventListener('error', (e) => {
+      console.error('[BGM] Error loading BGM:', e);
+      console.error('[BGM] Error details:', bgm.error);
+    });
+    bgm.addEventListener('play', () => {
+      console.log('[BGM] Started playing');
+    });
+    bgm.addEventListener('pause', () => {
+      console.log('[BGM] Paused');
+    });
+
+    bgm.play()
+      .then(() => console.log('[BGM] Play promise resolved successfully'))
+      .catch(err => {
+        console.error('[BGM] Play failed:', err);
+        console.error('[BGM] Error name:', err.name);
+        console.error('[BGM] Error message:', err.message);
+      });
   }
 }
 function playSe(freq: number, type: OscillatorType, volume: number) {
