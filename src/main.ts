@@ -113,6 +113,7 @@ let mergeLockedBodies = new Set<number>();
 let lastSeTime = 0;
 let bgm: HTMLAudioElement | null = null;
 const planetImages: Record<number, HTMLImageElement> = {};
+let gameOverOverlay: HTMLElement | null = null;
 
 // Bag for weighted random
 class PlanetBag {
@@ -298,6 +299,7 @@ function drawPlanet(ctx: CanvasRenderingContext2D, x: number, y: number, r: numb
 function init() {
   initPlanetImages();
   const container = document.getElementById('game-container')!;
+  gameOverOverlay = document.getElementById('gameover-overlay');
   const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
   const width = container.clientWidth;
   const height = container.clientHeight;
@@ -413,10 +415,8 @@ function init() {
       return true;
     });
     if (isGameOver) {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; ctx.fillRect(0, 0, width, height);
-      ctx.fillStyle = 'white'; ctx.font = 'bold 40px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('GAME OVER', width / 2, height / 2 - 20);
-      ctx.font = 'bold 20px sans-serif'; ctx.fillText('TAP TO RETRY', width / 2, height / 2 + 30);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.fillRect(0, 0, width, height);
     }
   });
 
@@ -453,6 +453,13 @@ function initPlanetImages() {
       drawNextPreview();
     };
     planetImages[i] = img;
+  }
+}
+
+function setGameOver(value: boolean) {
+  isGameOver = value;
+  if (gameOverOverlay) {
+    gameOverOverlay.classList.toggle('active', value);
   }
 }
 
@@ -564,14 +571,15 @@ function checkDeadline() {
   }
   if (violation) {
     if (!deadLineViolatedStartTime) deadLineViolatedStartTime = performance.now();
-    else if (performance.now() - deadLineViolatedStartTime > DEADLINE_THRESHOLD_MS) isGameOver = true;
+    else if (performance.now() - deadLineViolatedStartTime > DEADLINE_THRESHOLD_MS) setGameOver(true);
   } else deadLineViolatedStartTime = null;
 }
 
 function resetGame() {
   const bodies = Composite.allBodies(engine.world);
   Composite.remove(engine.world, bodies.filter(b => !b.isStatic));
-  score = 0; isGameOver = false; deadLineViolatedStartTime = null;
+  score = 0; deadLineViolatedStartTime = null;
+  setGameOver(false);
   blackHoleEffects = [];
   planetBag.reset();
   nextLevel = planetBag.pull();
