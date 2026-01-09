@@ -6,6 +6,8 @@ const DEADLINE_THRESHOLD_MS = 1500; // Slightly stricter
 const DROP_COOLDOWN_MS = 400;
 const MERGE_FLASH_DURATION = 100;
 const SCORE_POP_DURATION = 600;
+const BLACK_HOLE_DURATION = 900;
+const BLACK_HOLE_BONUS = 5000;
 const SE_GLOBAL_COOLDOWN_MS = 80;
 const SE_DROP_THRESHOLD = 0.5;
 
@@ -38,6 +40,29 @@ const PLANETS: Record<number, PlanetDef> = {
   11: { level: 11, name: '太陽', radius: 140, mass: 8.5, score: 10240, color: '#ff4500' },
 };
 
+const PLANET_IMAGE_URLS: Record<number, string> = {
+  1: new URL('../image/1_冥王星.png', import.meta.url).href,
+  2: new URL('../image/2_月.png', import.meta.url).href,
+  3: new URL('../image/3_水星.png', import.meta.url).href,
+  4: new URL('../image/4_火星.png', import.meta.url).href,
+  5: new URL('../image/5_金星.png', import.meta.url).href,
+  6: new URL('../image/6_地球.png', import.meta.url).href,
+  7: new URL('../image/7_天王星.png', import.meta.url).href,
+  8: new URL('../image/8_海王星.png', import.meta.url).href,
+  9: new URL('../image/9_土星.png', import.meta.url).href,
+  10: new URL('../image/10_木星.png', import.meta.url).href,
+  11: new URL('../image/11_太陽.png', import.meta.url).href,
+};
+
+const PLANET_IMAGE_SCALES: Record<number, number> = {
+  6: 1.12, // Earth
+  7: 1.2, // Uranus
+  9: 1.6, // Saturn
+  11: 1.2, // Sun
+};
+const PLANET_IMAGE_OVERFLOW_LEVELS = new Set([6, 7, 9, 11]);
+const PLANET_IMAGE_PRESERVE_ASPECT_LEVELS = new Set([7, 9]);
+
 const NEXT_CANDIDATES = [1, 2, 3, 4, 5];
 const NEXT_WEIGHTS: Record<number, number> = { 1: 6, 2: 6, 3: 5, 4: 4, 5: 3 };
 
@@ -55,15 +80,24 @@ interface ScorePop {
   startTime: number;
 }
 
+interface BlackHoleEffect {
+  x: number;
+  y: number;
+  startTime: number;
+}
+
 // --- State Variables ---
 let engine: Engine;
 let render: Render;
 let runner: Runner;
+let ground: any;
+let leftWall: any;
+let rightWall: any;
 
 let score = 0;
 let hiScore = parseInt(localStorage.getItem('hiScore') || '0');
-// Always start with only Pluto discovered for fresh experience
-let discoveredLevels = new Set([1]);
+// Start with no discoveries; first appeared planet gets discovered
+let discoveredLevels = new Set<number>();
 
 let currentLevel = 1;
 let nextLevel = 1;
@@ -74,15 +108,21 @@ let deadLineViolatedStartTime: number | null = null;
 
 let flashes: Flash[] = [];
 let scorePops: ScorePop[] = [];
+let blackHoleEffects: BlackHoleEffect[] = [];
 let mergeLockedBodies = new Set<number>();
 let lastSeTime = 0;
 let bgm: HTMLAudioElement | null = null;
+const planetImages: Record<number, HTMLImageElement> = {};
 
 // Bag for weighted random
 class PlanetBag {
   items: number[] = [];
   lastItem: number | null = null;
   constructor() { this.refill(); }
+  reset() {
+    this.lastItem = null;
+    this.refill();
+  }
   refill() {
     this.items = [];
     for (const lv of NEXT_CANDIDATES) {
@@ -214,6 +254,34 @@ function drawPlanet(ctx: CanvasRenderingContext2D, x: number, y: number, r: numb
   ctx.fillStyle = grad;
   ctx.fill();
 
+  const img = planetImages[level];
+  if (img && img.complete && img.naturalWidth > 0) {
+    const scale = PLANET_IMAGE_SCALES[level] ?? 1;
+    const size = r * 2 * scale;
+    let drawW = size;
+    let drawH = size;
+    if (PLANET_IMAGE_PRESERVE_ASPECT_LEVELS.has(level)) {
+      const aspect = img.naturalWidth / img.naturalHeight;
+      if (aspect >= 1) {
+        drawW = size;
+        drawH = size / aspect;
+      } else {
+        drawH = size;
+        drawW = size * aspect;
+      }
+    }
+    const offsetX = -drawW / 2;
+    const offsetY = -drawH / 2;
+    ctx.save();
+    if (!PLANET_IMAGE_OVERFLOW_LEVELS.has(level)) {
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.clip();
+    }
+    ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+    ctx.restore();
+  }
+
   // Spots
   ctx.fillStyle = 'rgba(255,255,255,0.1)';
   for (let i = 0; i < 5; i++) {
@@ -228,6 +296,7 @@ function drawPlanet(ctx: CanvasRenderingContext2D, x: number, y: number, r: numb
 
 // --- Initialization ---
 function init() {
+  initPlanetImages();
   const container = document.getElementById('game-container')!;
   const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
   const width = container.clientWidth;
@@ -241,15 +310,7 @@ function init() {
     options: { width, height, wireframes: false, background: 'transparent' }
   });
 
-  const wallOptions = {
-    isStatic: true, restitution: 0.1, friction: WALL_FRICTION,
-    render: { fillStyle: '#2c3e50' }
-  };
-  const ground = Bodies.rectangle(width / 2, height + 30, width, 60, wallOptions);
-  const leftWall = Bodies.rectangle(-30, height / 2, 60, height, wallOptions);
-  const rightWall = Bodies.rectangle(width + 30, height / 2, 60, height, wallOptions);
-
-  Composite.add(engine.world, [ground, leftWall, rightWall]);
+  rebuildBounds(width, height);
 
   Render.run(render);
   runner = Runner.create();
@@ -275,7 +336,13 @@ function init() {
         }
       }
       if (bodyA.plugin.planet && bodyB.plugin.planet) {
-        if (bodyA.plugin.planet.level === bodyB.plugin.planet.level && bodyA.plugin.planet.level < 11) {
+        if (bodyA.plugin.planet.level === 11 && bodyB.plugin.planet.level === 11) {
+          if (!mergeLockedBodies.has(bodyA.id) && !mergeLockedBodies.has(bodyB.id)) {
+            mergeLockedBodies.add(bodyA.id);
+            mergeLockedBodies.add(bodyB.id);
+            triggerBlackHole((bodyA.position.x + bodyB.position.x) / 2, (bodyA.position.y + bodyB.position.y) / 2);
+          }
+        } else if (bodyA.plugin.planet.level === bodyB.plugin.planet.level && bodyA.plugin.planet.level < 11) {
           if (!mergeLockedBodies.has(bodyA.id) && !mergeLockedBodies.has(bodyB.id)) {
             mergeLockedBodies.add(bodyA.id);
             mergeLockedBodies.add(bodyB.id);
@@ -325,6 +392,26 @@ function init() {
       ctx.textAlign = 'center'; ctx.fillText(`+${p.score}`, p.x, p.y - (elapsed / SCORE_POP_DURATION) * 50);
       return true;
     });
+    blackHoleEffects = blackHoleEffects.filter(e => {
+      const elapsed = now - e.startTime;
+      if (elapsed > BLACK_HOLE_DURATION) return false;
+      const t = elapsed / BLACK_HOLE_DURATION;
+      const maxR = 220;
+      const r = 40 + maxR * t;
+      const alpha = 0.9 * (1 - t);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, r * 0.6, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.6 * (1 - t)})`;
+      ctx.lineWidth = 6;
+      ctx.stroke();
+      ctx.restore();
+      return true;
+    });
     if (isGameOver) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; ctx.fillRect(0, 0, width, height);
       ctx.fillStyle = 'white'; ctx.font = 'bold 40px sans-serif'; ctx.textAlign = 'center';
@@ -351,8 +438,48 @@ function init() {
     dropPlanet();
   });
 
+  window.addEventListener('resize', handleResize);
+
   updateHUD();
   drawNextPreview();
+}
+
+function initPlanetImages() {
+  for (let i = 1; i <= 11; i++) {
+    const img = new Image();
+    img.src = PLANET_IMAGE_URLS[i];
+    img.onload = () => {
+      updateEvolutionUI();
+      drawNextPreview();
+    };
+    planetImages[i] = img;
+  }
+}
+
+function handleResize() {
+  const container = document.getElementById('game-container')!;
+  const width = container.clientWidth;
+  const height = container.clientHeight;
+  render.canvas.width = width;
+  render.canvas.height = height;
+  render.options.width = width;
+  render.options.height = height;
+  rebuildBounds(width, height);
+  updateDropX(dropX);
+}
+
+function rebuildBounds(width: number, height: number) {
+  if (ground || leftWall || rightWall) {
+    Composite.remove(engine.world, [ground, leftWall, rightWall].filter(Boolean));
+  }
+  const wallOptions = {
+    isStatic: true, restitution: 0.1, friction: WALL_FRICTION,
+    render: { fillStyle: '#2c3e50' }
+  };
+  ground = Bodies.rectangle(width / 2, height + 30, width, 60, wallOptions);
+  leftWall = Bodies.rectangle(-30, height / 2, 60, height, wallOptions);
+  rightWall = Bodies.rectangle(width + 30, height / 2, 60, height, wallOptions);
+  Composite.add(engine.world, [ground, leftWall, rightWall]);
 }
 
 function updateDropX(x: number) {
@@ -410,6 +537,20 @@ function handleMerge(bodyA: any, bodyB: any) {
   playSe(200 + newLv * 100, 'sine', 0.5);
 }
 
+function triggerBlackHole(x: number, y: number) {
+  const bodies = Composite.allBodies(engine.world);
+  const planets = bodies.filter(b => !b.isStatic && b.plugin.planet);
+  Composite.remove(engine.world, planets);
+
+  score += BLACK_HOLE_BONUS;
+  if (score > hiScore) { hiScore = score; localStorage.setItem('hiScore', hiScore.toString()); }
+  updateHUD();
+
+  blackHoleEffects.push({ x, y, startTime: performance.now() });
+  scorePops.push({ x, y, score: BLACK_HOLE_BONUS, startTime: performance.now() });
+  playSe(60, 'sine', 0.7);
+}
+
 function checkDeadline() {
   if (isGameOver) return;
   const h = (render.options as any).height;
@@ -431,9 +572,13 @@ function resetGame() {
   const bodies = Composite.allBodies(engine.world);
   Composite.remove(engine.world, bodies.filter(b => !b.isStatic));
   score = 0; isGameOver = false; deadLineViolatedStartTime = null;
+  blackHoleEffects = [];
+  planetBag.reset();
+  nextLevel = planetBag.pull();
+  currentLevel = planetBag.pull();
 
   // Reset Discovery Progress (each game session starts fresh)
-  discoveredLevels = new Set([1]);
+  discoveredLevels = new Set<number>();
   localStorage.setItem('discoveredLevels', JSON.stringify([...discoveredLevels]));
   updateEvolutionUI();
 

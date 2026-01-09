@@ -112,12 +112,27 @@ body {
   flex: 1;
   position: relative;
   overflow: hidden;
+  background-image: url("../image/backgroundimage.jpg");
+  background-size: cover;
+  background-position: right center;
+  background-repeat: no-repeat;
+}
+
+#game-container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  z-index: 1;
 }
 
 #game-canvas {
   width: 100%;
   height: 100%;
   display: block;
+  position: relative;
+  z-index: 2;
 }
 
 #evolution-ui {
