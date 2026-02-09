@@ -18,21 +18,24 @@ body {
   background: var(--bg-color);
   color: var(--text-color);
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
+  min-height: 100svh;
   overflow: hidden;
   touch-action: none;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 #app {
   position: relative;
   width: 100%;
-  max-width: min(700px, calc(95vh * 5 / 9));
+  max-width: min(700px, calc(100dvh * 5 / 9));
   /* Maintain 5:9 ratio based on height */
-  height: 100%;
-  max-height: min(900px, 95vh);
+  height: 100dvh;
+  max-height: min(900px, 100dvh);
   /* Ensure UI fits on screen */
   margin: 0 auto;
   /* Center horizontally */
@@ -245,6 +248,13 @@ body {
 }
 
 @media (max-width: 600px) and (pointer: coarse) {
+  #app {
+    max-width: 100vw;
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+
   #hud {
     height: 84px;
     min-height: 84px;
@@ -278,5 +288,9 @@ body {
   .score-line {
     font-size: 14px;
     margin: 1px 0;
+  }
+
+  #evolution-ui {
+    display: none;
   }
 }
