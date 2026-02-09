@@ -243,3 +243,40 @@ body {
   font-size: 18px;
   color: rgba(255, 255, 255, 0.8);
 }
+
+@media (max-width: 600px) and (pointer: coarse) {
+  #hud {
+    height: 84px;
+    min-height: 84px;
+    padding: 6px 8px;
+  }
+
+  .hud-item.ring {
+    width: 74px;
+  }
+
+  .label {
+    font-size: 10px;
+    margin-bottom: 2px;
+  }
+
+  #next-canvas {
+    width: 58px;
+    height: 58px;
+    border-width: 1px;
+  }
+
+  #next-name {
+    font-size: 11px;
+    margin-top: 2px;
+  }
+
+  .score-box {
+    padding-right: 8px;
+  }
+
+  .score-line {
+    font-size: 14px;
+    margin: 1px 0;
+  }
+}
