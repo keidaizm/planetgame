@@ -1,8 +1,8 @@
 import { Engine, Render, Runner, Bodies, Composite, Events, Vector } from 'matter-js';
 
 // --- Constants & Config ---
-const DEADLINE_RATIO = 0.18;
 const DEADLINE_THRESHOLD_MS = 1500; // Slightly stricter
+const DEADLINE_EXTRA_MARGIN_PX = 16;
 const DROP_COOLDOWN_MS = 400;
 const MERGE_FLASH_DURATION = 100;
 const SCORE_POP_DURATION = 600;
@@ -65,6 +65,7 @@ const PLANET_IMAGE_PRESERVE_ASPECT_LEVELS = new Set([7, 9]);
 
 const NEXT_CANDIDATES = [1, 2, 3, 4, 5];
 const NEXT_WEIGHTS: Record<number, number> = { 1: 6, 2: 6, 3: 5, 4: 4, 5: 3 };
+const MAX_DROP_RADIUS = Math.max(...NEXT_CANDIDATES.map((lv) => PLANETS[lv].radius));
 
 // --- Types ---
 interface Flash {
@@ -295,6 +296,11 @@ function drawPlanet(ctx: CanvasRenderingContext2D, x: number, y: number, r: numb
   ctx.restore();
 }
 
+function getDeadlineY(height: number) {
+  const base = MAX_DROP_RADIUS * 2 + DEADLINE_EXTRA_MARGIN_PX;
+  return Math.min(base, height * 0.3);
+}
+
 // --- Initialization ---
 function init() {
   initPlanetImages();
@@ -374,7 +380,7 @@ function init() {
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'; ctx.stroke(); ctx.setLineDash([]);
       drawPlanet(ctx, dropX, 50, PLANETS[currentLevel].radius, currentLevel);
     }
-    const deadlineY = height * DEADLINE_RATIO;
+    const deadlineY = getDeadlineY(height);
     ctx.beginPath(); ctx.moveTo(0, deadlineY); ctx.lineTo(width, deadlineY);
     ctx.strokeStyle = deadLineViolatedStartTime ? '#ff4757' : 'rgba(255, 71, 87, 0.3)';
     ctx.lineWidth = 2; ctx.stroke();
@@ -561,11 +567,11 @@ function triggerBlackHole(x: number, y: number) {
 function checkDeadline() {
   if (isGameOver) return;
   const h = (render.options as any).height;
-  const dy = h * DEADLINE_RATIO;
+  const dy = getDeadlineY(h);
   const bodies = Composite.allBodies(engine.world);
   let violation = false;
   for (const b of bodies) {
-    if (!b.isStatic && b.plugin.planet && b.position.y - b.circleRadius! < dy && b.position.y > 120) {
+    if (!b.isStatic && b.plugin.planet && b.position.y - b.circleRadius! < dy && b.position.y > dy) {
       violation = true; break;
     }
   }
