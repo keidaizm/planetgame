@@ -115,6 +115,7 @@ let lastSeTime = 0;
 let bgm: HTMLAudioElement | null = null;
 const planetImages: Record<number, HTMLImageElement> = {};
 let gameOverOverlay: HTMLElement | null = null;
+let bgmLifecycleBound = false;
 
 // Bag for weighted random
 class PlanetBag {
@@ -208,6 +209,40 @@ function initAudio() {
         });
     }
   }
+}
+
+function stopBgmForBackground() {
+  if (!bgm) return;
+  bgm.pause();
+  bgm.currentTime = 0;
+}
+
+function resumeBgmFromStart() {
+  if (!bgm) return;
+  bgm.currentTime = 0;
+  bgm.play().catch((err) => console.warn('[BGM] Resume blocked:', err));
+}
+
+function bindBgmLifecycle() {
+  if (bgmLifecycleBound) return;
+  bgmLifecycleBound = true;
+
+  const onDeactivate = () => {
+    stopBgmForBackground();
+  };
+
+  const onActivate = () => {
+    if (document.hidden) return;
+    resumeBgmFromStart();
+  };
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) onDeactivate();
+    else onActivate();
+  });
+  window.addEventListener('pagehide', onDeactivate);
+  window.addEventListener('blur', onDeactivate);
+  window.addEventListener('focus', onActivate);
 }
 function playSe(freq: number, type: OscillatorType, volume: number) {
   if (!audioCtx || audioCtx.state === 'suspended') return;
@@ -304,6 +339,7 @@ function getDeadlineY(height: number) {
 // --- Initialization ---
 function init() {
   initPlanetImages();
+  bindBgmLifecycle();
   const container = document.getElementById('game-container')!;
   gameOverOverlay = document.getElementById('gameover-overlay');
   const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
