@@ -58,7 +58,7 @@ const PLANET_IMAGE_SCALES: Record<number, number> = {
   6: 1.12, // Earth
   7: 1.2, // Uranus
   9: 1.6, // Saturn
-  11: 1.2, // Sun
+  11: 1.35, // Sun
 };
 const PLANET_IMAGE_OVERFLOW_LEVELS = new Set([6, 7, 9, 11]);
 const PLANET_IMAGE_PRESERVE_ASPECT_LEVELS = new Set([7, 9]);
@@ -486,6 +486,15 @@ function init() {
   drawNextPreview();
 }
 
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.error('[PWA] Service worker registration failed:', err);
+    });
+  });
+}
+
 function initPlanetImages() {
   for (let i = 1; i <= 11; i++) {
     const img = new Image();
@@ -686,4 +695,5 @@ function updateEvolutionUI() {
   }
 }
 
-window.onload = init;
+registerServiceWorker();
+window.addEventListener('load', init);
