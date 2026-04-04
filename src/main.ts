@@ -41,17 +41,17 @@ const PLANETS: Record<number, PlanetDef> = {
 };
 
 const PLANET_IMAGE_URLS: Record<number, string> = {
-  1: new URL('../image/1_冥王星.png', import.meta.url).href,
-  2: new URL('../image/2_月.png', import.meta.url).href,
-  3: new URL('../image/3_水星.png', import.meta.url).href,
-  4: new URL('../image/4_火星.png', import.meta.url).href,
-  5: new URL('../image/5_金星.png', import.meta.url).href,
-  6: new URL('../image/6_地球.png', import.meta.url).href,
-  7: new URL('../image/7_天王星.png', import.meta.url).href,
-  8: new URL('../image/8_海王星.png', import.meta.url).href,
-  9: new URL('../image/9_土星.png', import.meta.url).href,
-  10: new URL('../image/10_木星.png', import.meta.url).href,
-  11: new URL('../image/11_太陽.png', import.meta.url).href,
+  1: '/images/1_冥王星.png',
+  2: '/images/2_月.png',
+  3: '/images/3_水星.png',
+  4: '/images/4_火星.png',
+  5: '/images/5_金星.png',
+  6: '/images/6_地球.png',
+  7: '/images/7_天王星.png',
+  8: '/images/8_海王星.png',
+  9: '/images/9_土星.png',
+  10: '/images/10_木星.png',
+  11: '/images/11_太陽.png',
 };
 
 const PLANET_IMAGE_SCALES: Record<number, number> = {
